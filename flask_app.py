@@ -1,59 +1,43 @@
-from flask import Flask, render_template, send_from_directory, request, redirect, session
-import os
+from flask import Flask, render_template
+import cloudinary
+import cloudinary.api
 
 app = Flask(__name__)
-app.secret_key = "supersecretkey"  # Required for login sessions
 
-# Login credentials
-USERNAME = "admin"
-PASSWORD = "1234"
+# ------------------------------
+# CLOUDINARY CONFIG
+# ------------------------------
+cloudinary.config(
+   cloud_name="dimzggmbt",
+    api_key="489628589741893",
+    api_secret="JQobGgRo8AXD6qM35zogNgy0BfA"
+)
 
-# Folder where images are stored
-IMAGE_FOLDER = r"C:\Users\Chethan Kumar\Pictures\pen"
-
-
-# ---------- LOGIN PAGE ----------
-@app.route("/", methods=["GET", "POST"])
-def login():
-    if request.method == "POST":
-        user = request.form["username"]
-        pw = request.form["password"]
-
-        if user == USERNAME and pw == PASSWORD:
-            session["logged_in"] = True
-            return redirect("/gallery")
-        else:
-            return render_template("login.html", error="Invalid username or password")
-
+# ------------------------------
+# HOME PAGE
+# ------------------------------
+@app.route("/")
+def home():
     return render_template("login.html")
 
 
-# ---------- GALLERY PAGE ----------
+# ------------------------------
+# GALLERY PAGE
+# ------------------------------
 @app.route("/gallery")
 def gallery():
-    if not session.get("logged_in"):
-        return redirect("/")
 
-    # List only image files
-    images = [img for img in os.listdir(IMAGE_FOLDER)
-              if img.lower().endswith((".jpg", ".jpeg", ".png"))]
+    # Fetch all images stored in Cloudinary folder "snapshots/"
+    result = cloudinary.api.resources(
+        type="upload",
+        prefix="snapshots/",
+        max_results=500
+    )
+
+    # Extract only the secure image URLs
+    images = [item["secure_url"] for item in result["resources"]]
 
     return render_template("gallery.html", images=images)
-
-
-# ---------- SERVE IMAGES ----------
-@app.route("/images/<filename>")
-def send_image(filename):
-    if not session.get("logged_in"):
-        return redirect("/")
-    return send_from_directory(IMAGE_FOLDER, filename)
-
-
-# ---------- LOGOUT ----------
-@app.route("/logout")
-def logout():
-    session.clear()
-    return redirect("/")
 
 
 if __name__ == "__main__":
